@@ -1,27 +1,50 @@
 use std::{fs, io};
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
-fn main() -> io::Result<()> {
-    let mut folder_path = String::new();
+fn input_dir() -> String {
+    let mut dir = String::new();
 
     println!("Folder Path: ");
     io::stdin()
-        .read_line(&mut folder_path)
+        .read_line(&mut dir)
         .expect("Failed to read line");
 
-    let path = Path::new(folder_path.trim());
-    let mut entries = fs::read_dir(path)?
+    dir.trim().to_string()
+}
+
+fn visit_dirs(path: String) -> io::Result<Vec<PathBuf>> {
+    let entries = fs::read_dir(path)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
 
-    entries.sort_by_key(|path| {
-        fs::metadata(path)
-            .and_then(|m| m.modified())
-            .unwrap_or(SystemTime::UNIX_EPOCH)
-    });
-    entries.reverse();
+    Ok(entries)
+}
 
-    print!("{:?}", entries);
+fn get_modified_times(path: Vec<PathBuf>) -> io::Result<Vec<(PathBuf, SystemTime)>> {
+    path
+        .into_iter()
+        .map(|path| {
+            let metadata = fs::metadata(&path)?;
+            let last_modified = metadata.modified()?;
+
+            Ok((path, last_modified))
+        })
+        .collect()
+}
+
+fn main() -> io::Result<()> {
+    let dirs = visit_dirs(input_dir())?;
+    let last_modified = get_modified_times(dirs)?;
+
+    for (path, time) in last_modified {
+        let file_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("<unknown>");
+
+        println!("{file_name} - {:?}", time);
+    }
+
     Ok(())
 }
