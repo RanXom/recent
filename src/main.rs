@@ -22,19 +22,21 @@ fn visit_dirs(path: String) -> io::Result<Vec<PathBuf>> {
 }
 
 fn get_modified_times(path: Vec<PathBuf>) -> io::Result<Vec<(PathBuf, SystemTime)>> {
-    path
-        .into_iter()
-        .filter_map(|path| {
-            let metadata = fs::metadata(&path).ok()?;
+    Ok(
+        path
+            .into_iter()
+            .filter_map(|path| {
+                let metadata = fs::metadata(&path).ok()?;
 
-            if metadata.is_file() {
-                let last_modified = metadata.modified().ok()?;
-                Some((path, last_modified))
-            } else {
-                None
-            }
-        })
-        .collect()
+                if metadata.is_file() {
+                    let last_modified = metadata.modified().ok()?;
+                    Some((path, last_modified))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    )
 }
 
 fn main() -> io::Result<()> {
