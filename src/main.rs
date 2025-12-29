@@ -13,10 +13,21 @@ fn input_dir() -> String {
     dir.trim().to_string()
 }
 
-fn visit_dirs(path: String) -> io::Result<Vec<PathBuf>> {
-    let entries = fs::read_dir(path)?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
+fn visit_dirs(path: &PathBuf) -> io::Result<Vec<PathBuf>> {
+    let mut entries: Vec<PathBuf> = Vec::new();
+
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        let metadata = fs::metadata(&entry_path)?;
+
+        if metadata.is_file() {
+            entries.push(entry_path);
+        } else if metadata.is_dir() {
+            let mut sub_entries = visit_dirs(&entry_path)?;
+            entries.append(&mut sub_entries);
+        }
+    }
 
     Ok(entries)
 }
@@ -40,7 +51,8 @@ fn get_modified_times(path: Vec<PathBuf>) -> io::Result<Vec<(PathBuf, SystemTime
 }
 
 fn main() -> io::Result<()> {
-    let dirs = visit_dirs(input_dir())?;
+    let dir_path = PathBuf::from(input_dir());
+    let dirs = visit_dirs(&dir_path)?;
     let last_modified = get_modified_times(dirs)?;
 
     for (path, time) in last_modified {
